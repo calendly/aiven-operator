@@ -492,6 +492,8 @@ spec:
                     - "10"
                     - "11"
                     - "12"
+                    - "13"
+                    - "14"
                     type: string
                   pgbouncer:
                     description: PGBouncer connection pooling settings
