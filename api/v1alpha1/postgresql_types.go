@@ -25,7 +25,7 @@ type PostgreSQLSpec struct {
 }
 
 type PostgreSQLUserconfig struct {
-	// +kubebuilder:validation:Enum="9.5";"9.6";"10";"11";"12"
+	// +kubebuilder:validation:Enum="9.5";"9.6";"10";"11";"12";"13";"14"
 	// PostgreSQL major version
 	PgVersion string `json:"pg_version,omitempty"`
 
