@@ -51,7 +51,7 @@ var _ = Describe("ConnectionPool Controller", func() {
 		db = databaseSpec(serviceName, dbName, namespace)
 		user = serviceUserSpec(serviceName, userName, namespace)
 		pool = connectionPoolSpec(serviceName, dbName, poolName, userName, namespace)
-		poolNoUser = connectionPoolNoUserSpec(serviceName, dbName, poolName, namespace)
+		poolNoUser = connectionPoolNoUserSpec(serviceName, dbName, poolNameNoUser, namespace)
 
 		By("Creating a new PostgreSQL CR instance")
 		Expect(k8sClient.Create(ctx, pg)).Should(Succeed())
