@@ -27,15 +27,17 @@ var _ = Describe("ConnectionPool Controller", func() {
 	)
 
 	var (
-		pg          *v1alpha1.PostgreSQL
-		user        *v1alpha1.ServiceUser
-		db          *v1alpha1.Database
-		pool        *v1alpha1.ConnectionPool
-		serviceName string
-		dbName      string
-		userName    string
-		poolName    string
-		ctx         context.Context
+		pg             *v1alpha1.PostgreSQL
+		user           *v1alpha1.ServiceUser
+		db             *v1alpha1.Database
+		pool           *v1alpha1.ConnectionPool
+		poolNoUser     *v1alpha1.ConnectionPool
+		serviceName    string
+		dbName         string
+		userName       string
+		poolName       string
+		poolNameNoUser string
+		ctx            context.Context
 	)
 
 	BeforeEach(func() {
@@ -44,10 +46,12 @@ var _ = Describe("ConnectionPool Controller", func() {
 		dbName = "k8s-db-pool-acc-" + generateRandomID()
 		userName = "k8s-user-pool-acc-" + generateRandomID()
 		poolName = "k8s-pool-acc-" + generateRandomID()
+		poolNameNoUser = "k8s-pool-nouser-acc-" + generateRandomID()
 		pg = pgSpec(serviceName, namespace)
 		db = databaseSpec(serviceName, dbName, namespace)
 		user = serviceUserSpec(serviceName, userName, namespace)
 		pool = connectionPoolSpec(serviceName, dbName, poolName, userName, namespace)
+		poolNoUser = connectionPoolNoUserSpec(serviceName, dbName, poolName, namespace)
 
 		By("Creating a new PostgreSQL CR instance")
 		Expect(k8sClient.Create(ctx, pg)).Should(Succeed())
@@ -60,6 +64,9 @@ var _ = Describe("ConnectionPool Controller", func() {
 
 		By("Creating a new ConnectionPool CR instance")
 		Expect(k8sClient.Create(ctx, pool)).Should(Succeed())
+
+		By("Creating a new ConnectionPool CR instance (no user)")
+		Expect(k8sClient.Create(ctx, poolNoUser)).Should(Succeed())
 
 		By("by retrieving ConnectionPool instance from k8s")
 		Eventually(func() bool {
@@ -88,6 +95,24 @@ var _ = Describe("ConnectionPool Controller", func() {
 			Expect(createdSecret.Data["PGDATABASE"]).NotTo(BeEmpty())
 			Expect(createdSecret.Data["PGUSER"]).NotTo(BeEmpty())
 			Expect(createdSecret.Data["PGPASSWORD"]).NotTo(BeEmpty())
+			Expect(createdSecret.Data["PGSSLMODE"]).NotTo(BeEmpty())
+			Expect(createdSecret.Data["DATABASE_URI"]).NotTo(BeEmpty())
+		})
+
+		It("should createOrUpdate a new ConnectionPoll instance with no user", func() {
+			createdPool := &v1alpha1.ConnectionPool{}
+			lookupKey := types.NamespacedName{Name: poolNameNoUser, Namespace: namespace}
+
+			Expect(k8sClient.Get(ctx, lookupKey, createdPool)).Should(Succeed())
+
+			By("by checking ConnectionPool secret and status fields")
+			createdSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: poolNameNoUser, Namespace: namespace}, createdSecret)).Should(Succeed())
+
+			Expect(createdSecret.Data["PGHOST"]).NotTo(BeEmpty())
+			Expect(createdSecret.Data["PGDATABASE"]).NotTo(BeEmpty())
+			Expect(createdSecret.Data["PGUSER"]).To(BeEmpty())
+			Expect(createdSecret.Data["PGPASSWORD"]).To(BeEmpty())
 			Expect(createdSecret.Data["PGSSLMODE"]).NotTo(BeEmpty())
 			Expect(createdSecret.Data["DATABASE_URI"]).NotTo(BeEmpty())
 		})
@@ -123,6 +148,30 @@ func connectionPoolSpec(service, database, pool, user, namespace string) *v1alph
 			ServiceName:  service,
 			DatabaseName: database,
 			Username:     user,
+			PoolSize:     25,
+			PoolMode:     "transaction",
+			AuthSecretRef: v1alpha1.AuthSecretReference{
+				Name: secretRefName,
+				Key:  secretRefKey,
+			},
+		},
+	}
+}
+
+func connectionPoolNoUserSpec(service, database, pool, namespace string) *v1alpha1.ConnectionPool {
+	return &v1alpha1.ConnectionPool{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "aiven.io/v1alpha1",
+			Kind:       "ConnectionPool",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pool,
+			Namespace: namespace,
+		},
+		Spec: v1alpha1.ConnectionPoolSpec{
+			Project:      os.Getenv("AIVEN_PROJECT_NAME"),
+			ServiceName:  service,
+			DatabaseName: database,
 			PoolSize:     25,
 			PoolMode:     "transaction",
 			AuthSecretRef: v1alpha1.AuthSecretReference{

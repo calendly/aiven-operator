@@ -134,9 +134,20 @@ func (h ConnectionPoolHandler) get(avn *aiven.Client, i client.Object) (*corev1.
 		return nil, fmt.Errorf("cannot get service: %w", err)
 	}
 
+	data := map[string]string{
+		"PGHOST":       s.URIParams["host"],
+		"PGPORT":       s.URIParams["port"],
+		"PGDATABASE":   cp.Database,
+		"PGSSLMODE":    s.URIParams["sslmode"],
+		"DATABASE_URI": cp.ConnectionURI,
+	}
+
 	u, err := avn.ServiceUsers.Get(connPool.Spec.Project, connPool.Spec.ServiceName, connPool.Spec.Username)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get user: %w", err)
+		// no username defined for this pool.  that's ok, do nothing
+	} else {
+		data["PGUSER"] = u.Password
+		data["PGPASSWORD"] = cp.Username
 	}
 
 	metav1.SetMetaDataAnnotation(&connPool.ObjectMeta, instanceIsRunningAnnotation, "true")
@@ -150,15 +161,7 @@ func (h ConnectionPoolHandler) get(avn *aiven.Client, i client.Object) (*corev1.
 			Name:      h.getSecretName(connPool),
 			Namespace: connPool.Namespace,
 		},
-		StringData: map[string]string{
-			"PGHOST":       s.URIParams["host"],
-			"PGPORT":       s.URIParams["port"],
-			"PGDATABASE":   cp.Database,
-			"PGUSER":       cp.Username,
-			"PGPASSWORD":   u.Password,
-			"PGSSLMODE":    s.URIParams["sslmode"],
-			"DATABASE_URI": cp.ConnectionURI,
-		},
+		StringData: data,
 	}, nil
 }
 
