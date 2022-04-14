@@ -81,7 +81,7 @@ var _ = Describe("ConnectionPool Controller", func() {
 	})
 
 	Context("Validating ConnectionPool reconciler behaviour", func() {
-		It("should createOrUpdate a new ConnectionPoll instance", func() {
+		It("should createOrUpdate a new ConnectionPool instance", func() {
 			createdPool := &v1alpha1.ConnectionPool{}
 			lookupKey := types.NamespacedName{Name: poolName, Namespace: namespace}
 
@@ -99,7 +99,7 @@ var _ = Describe("ConnectionPool Controller", func() {
 			Expect(createdSecret.Data["DATABASE_URI"]).NotTo(BeEmpty())
 		})
 
-		It("should createOrUpdate a new ConnectionPoll instance with no user", func() {
+		It("should createOrUpdate a new ConnectionPool instance with no user", func() {
 			createdPool := &v1alpha1.ConnectionPool{}
 			lookupKey := types.NamespacedName{Name: poolNameNoUser, Namespace: namespace}
 
